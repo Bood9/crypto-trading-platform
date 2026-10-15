@@ -1,0 +1,383 @@
+[
+ {
+  "period": "deep_history",
+  "commit": "a6ff492",
+  "window": [
+   "2022-02-01",
+   "2024-08-01"
+  ],
+  "run_at": "2026-09-24T14:58:27+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "-0.017R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "1506",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "53.0%",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "-0.033R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "-0.038R without the two best (was -0.017R)",
+    "verdict": "FAIL"
+   }
+  ],
+  "trades": 1506,
+  "E_R": -0.01658300354774139,
+  "portfolio_equity": 41.87971503472845,
+  "drawdown_portfolio": 52.98843095081887,
+  "drawdown_population": 106.7483604698771,
+  "best_symbols": [
+   "ADAUSDT",
+   "BNBUSDT"
+  ]
+ },
+ {
+  "setup": "setup_d",
+  "kind": "in_sample",
+  "period": "in_sample",
+  "commit": "6668201",
+  "window": [
+   "2022-02-01",
+   "2026-02-07"
+  ],
+  "run_at": "2026-09-24T16:17:13+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "+0.044R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "740",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "18.4%",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "+0.037R",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "+0.011R without the two best (was +0.044R)",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Excess over the null hypothesis",
+    "required": ">= 2.0 SE",
+    "actual": "+1.27 SE (+0.044 vs -0.007R, 3752 trades)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Median move over the holding period",
+    "required": ">= 1.6%",
+    "actual": "6.24%",
+    "verdict": "PASS"
+   }
+  ],
+  "trades": 740,
+  "E_R": 0.04352800277605448,
+  "portfolio_equity": 53.81964593117265,
+  "drawdown_portfolio": 18.39564828925788,
+  "drawdown_population": 35.14198420781883,
+  "best_symbols": [
+   "ADAUSDT",
+   "DOGEUSDT"
+  ],
+  "null_z": 1.2747935527181837
+ },
+ {
+  "setup": "setup_e",
+  "kind": "in_sample",
+  "period": "in_sample",
+  "commit": "f65d67f",
+  "window": [
+   "2022-02-01",
+   "2026-02-07"
+  ],
+  "run_at": "2026-09-25T07:55:09+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "+0.024R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "4118",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "21.5%",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "+0.021R",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "+0.012R without the two best (was +0.024R)",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Excess over the null hypothesis",
+    "required": ">= 2.0 SE",
+    "actual": "+2.63 SE (+0.024 vs -0.014R, 20865 trades)",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Median move over the holding period",
+    "required": ">= 1.6%",
+    "actual": "8.15%",
+    "verdict": "PASS"
+   }
+  ],
+  "trades": 4118,
+  "E_R": 0.024313805272216722,
+  "portfolio_equity": 135.142640905832,
+  "drawdown_portfolio": 21.543292289888257,
+  "drawdown_population": 57.17878302040768,
+  "best_symbols": [
+   "1000PEPEUSDT",
+   "SOLUSDT"
+  ],
+  "null_z": 2.627188170894761
+ },
+ {
+  "setup": "setup_f",
+  "kind": "in_sample",
+  "period": "in_sample",
+  "commit": "6df0373",
+  "window": [
+   "2022-02-01",
+   "2026-02-07"
+  ],
+  "run_at": "2026-09-26T09:20:42+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "-0.047R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "1840",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "34.4%",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "-0.050R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "-0.052R without the two best (was -0.047R)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Excess over the null hypothesis",
+    "required": ">= 2.0 SE",
+    "actual": "-1.85 SE (-0.047 vs -0.020R, 9126 trades)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Median move over the holding period",
+    "required": ">= 1.6%",
+    "actual": "5.52%",
+    "verdict": "PASS"
+   }
+  ],
+  "trades": 1840,
+  "E_R": -0.046985696691927335,
+  "portfolio_equity": 81.31830624925789,
+  "drawdown_portfolio": 34.4009765267224,
+  "drawdown_population": 141.70871945021824,
+  "best_symbols": [
+   "CRVUSDT",
+   "FILUSDT"
+  ],
+  "null_z": -1.8538297089905684
+ },
+ {
+  "setup": "setup_g",
+  "kind": "in_sample",
+  "period": "in_sample",
+  "commit": "1ba6499",
+  "window": [
+   "2022-02-01",
+   "2026-02-07"
+  ],
+  "run_at": "2026-09-26T09:26:54+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "+0.011R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "1408",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "30.5%",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "+0.008R",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "-0.008R without the two best (was +0.011R)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Excess over the null hypothesis",
+    "required": ">= 2.0 SE",
+    "actual": "+0.74 SE (+0.011 vs -0.010R, 7158 trades)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Median move over the holding period",
+    "required": ">= 1.6%",
+    "actual": "8.85%",
+    "verdict": "PASS"
+   }
+  ],
+  "trades": 1408,
+  "E_R": 0.011229332251880596,
+  "portfolio_equity": 95.84945776372878,
+  "drawdown_portfolio": 30.533075336599808,
+  "drawdown_population": 58.66893268127651,
+  "best_symbols": [
+   "1000PEPEUSDT",
+   "SOLUSDT"
+  ],
+  "null_z": 0.7440430010561824
+ },
+ {
+  "setup": "setup_h",
+  "kind": "in_sample",
+  "period": "in_sample",
+  "commit": "6c84306",
+  "window": [
+   "2022-02-01",
+   "2026-02-07"
+  ],
+  "run_at": "2026-09-26T09:30:29+00:00",
+  "passed": false,
+  "thresholds": [
+   {
+    "threshold": "E on out-of-sample",
+    "required": "> +0.15R",
+    "actual": "-0.097R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Trades on OOS",
+    "required": ">= 60",
+    "actual": "65",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Drawdown, 95th percentile",
+    "required": "< 40%",
+    "actual": "18.4%",
+    "verdict": "PASS"
+   },
+   {
+    "threshold": "Survives 0.10% slippage",
+    "required": "E > 0",
+    "actual": "-0.101R",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Result does not rest on 1-2 symbols",
+    "required": "E > 0 without the two best",
+    "actual": "-0.213R without the two best (was -0.097R)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Excess over the null hypothesis",
+    "required": ">= 2.0 SE",
+    "actual": "-0.28 SE (-0.097 vs -0.067R, 316 trades)",
+    "verdict": "FAIL"
+   },
+   {
+    "threshold": "Median move over the holding period",
+    "required": ">= 1.6%",
+    "actual": "10.01%",
+    "verdict": "PASS"
+   }
+  ],
+  "trades": 65,
+  "E_R": -0.09722942672703735,
+  "portfolio_equity": 88.58534386480076,
+  "drawdown_portfolio": 18.400535354018334,
+  "drawdown_population": 18.547282292914673,
+  "best_symbols": [
+   "XRPUSDT",
+   "ADAUSDT"
+  ],
+  "null_z": -0.2779903376226828
+ }
+]

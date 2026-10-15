@@ -1,0 +1,825 @@
+# System configuration. Values marked [IN-SAMPLE] are tuned ONLY on the
+# first 18 months of history. Tuning them to out-of-sample is forbidden
+# (spec §16), see PROGRESS.md → "Known backtest limitations".
+
+# ---------------------------------------------------------------------------
+# Capital and risk (spec §4, §5). Deterministic, no LLM involvement.
+# ---------------------------------------------------------------------------
+risk:
+  # DEC-038: minimum deposit $100, the user's decision based on the numbers
+  # of DEC-037. At $40 the exchange minimum order ($5) at 1.5% risk gave a
+  # stop ceiling of 12% and cut off 84% of the daily strategy's days; at $100
+  # the ceiling is 30% and 91% are feasible. All percentages below are unchanged.
+  equity_usd: 100.0
+  margin_per_trade_pct: 17.5        # allowed 5–20
+  # P-007: risk per trade and loss limits must be compatible.
+  # Requirement: survive eight losses in a row without being switched off
+  # by the weekly limit: 20% / 8 = 2.5%.
+  #
+  # It was 6.0: four losses in a row were enough to switch off the week.
+  # Portfolio run of Setup C: account $40 → $22.11 in two months,
+  # then the weekly stop and 1036 rejections in a row (DEC-019).
+  #
+  # The value is exactly the one the rule gives, not picked with a margin
+  # "by eye": a margin is yet another knob without justification.
+  #
+  # The second constraint is the acceptance threshold of spec §7: p95
+  # drawdown over permutations of trade order < 40%. Measured on Setup C:
+  #   2.5% → 46.3% FAIL
+  #   2.0% → 42.0% FAIL
+  #   1.5% → 34.4% PASS
+  #
+  # The LARGEST value satisfying both thresholds is taken.
+  # Both thresholds were fixed before the run; arithmetic decides,
+  # the result is not picked.
+  #
+  # The weakness is recorded honestly: the second constraint is computed
+  # on the in-sample distribution of R, so this part of the risk is fitted
+  # to the data. The direction of the fit is towards lower risk,
+  # and the value is re-checked on the deeper history.
+  max_loss_per_trade_pct: 1.5
+  # DEC-040: position size ceiling is 30% of the deposit ($30 at $100).
+  # The user's wish: a position within $5–30. The lower bound is the
+  # exchange minimum order, enforced by the exchange itself. The upper one
+  # is enforced by this ceiling: with a very close stop the loss limit
+  # allowed a position of up to $175 with leverage; it is cut down, and the
+  # loss at the stop only gets smaller.
+  max_position_pct: 30.0
+  # DEC-050: 4 slots instead of 2, the user's decision (paper was taking
+  # ~35 weeks to reach 60 trades; 19 of 22 signals on 30.09 were "all slots
+  # taken"). 5 slots fail the project threshold p95 drawdown < 40% (spec §7)
+  # already on the official signal order (44.3%); 4 give 36.1% (in-sample).
+  # Margin ceiling = 4 × 17.5% / 0.8: the last slot does not disappear until
+  # equity falls by more than the weekly limit (20%). With a ceiling of
+  # exactly 4 × 17.5% it vanished after any loss (the margin of held
+  # positions is computed from equity at the time of their entry).
+  max_concurrent_positions: 4
+  max_total_margin_pct: 87.5
+  leverage_cap: 10                  # a CEILING, not a target value
+  min_liq_buffer_ratio: 3.0         # stop at least three times closer than liquidation
+  daily_loss_limit_pct: 10.0        # reached → OFF until the next UTC day
+  weekly_loss_limit_pct: 20.0       # reached → OFF, manual re-enable
+  max_correlated_positions: 1
+  correlation_threshold: 0.7        # |corr| above → reject if the direction matches
+  correlation_lookback_days: 30
+
+# ---------------------------------------------------------------------------
+# Costs (spec §3). Used both in the backtest and in the minimum target check.
+# ---------------------------------------------------------------------------
+costs:
+  maker_fee_pct: 0.02
+  taker_fee_pct: 0.055
+  slippage_pct: 0.05
+
+  # Mandatory Phase 2 sweep (DEC-007).
+  #
+  # This is where the protection against a thin book lives, instead of a
+  # spread filter. The strategy is run at every value, and the result goes
+  # into a separate report block.
+  #
+  # Read it like this: if the strategy survives only at 0.02%, that IS the
+  # backtest result, more important than any win rate. It means it rests on
+  # an execution assumption we will not have with a $70 position.
+  slippage_sensitivity: [0.02, 0.05, 0.10, 0.20]
+
+# ---------------------------------------------------------------------------
+# Universe (DEC-002, DEC-003)
+# ---------------------------------------------------------------------------
+universe:
+  quote_coin: USDT
+  contract_type: LinearPerpetual
+
+  # DEC-002: crypto only. Tokenized stocks, ETFs and commodities are excluded:
+  # they have different funding mechanics and underlying-market weekends → gaps.
+  crypto_only: true
+
+  # The asset class comes from the symbolType field in instruments-info.
+  # As of 2026-08-07: "" - 505 (crypto), innovation - 117 (crypto,
+  # innovation zone), stock - 174 (AAPL, ADBE, AMC, SOXL, MU…),
+  # commodity - 4 (BZ, CL, XAG, XAU).
+  #
+  # Selecting by base coin is not possible: a manual stop list lags behind
+  # listings, and there are already hundreds of tokenized stocks.
+  allowed_symbol_types:
+    - ""                            # regular crypto
+    - "innovation"                  # innovation-zone crypto
+
+  # An extra barrier in case the exchange adds a new asset class and does
+  # not set symbolType. Checked together with the type, not instead of it.
+  excluded_base_coins:
+    - XAU
+    - XAG
+    - XAUT
+    - XPT
+    - XPD
+    - CL
+    - BZ
+
+  top_n: 30
+
+  # [IN-SAMPLE] Universe width sweep (DEC-015).
+  #
+  # Added because this is exactly the knob that binds. Measured 2026-09-16:
+  # 1619 symbol-months pass the $25M turnover threshold, 906 of them have
+  # a rank above 30, so top_n cuts off more symbols than the liquidity
+  # threshold itself. Setup A loses 81.5% of trades to this: of 130
+  # funded positions, 24 are counted.
+  #
+  # DEC-009 described "at $25M rank binds, not liquidity" as a sign of
+  # health: the width is exactly top_n in both periods, the periods are
+  # comparable. It should have been read the other way round: the universe
+  # width is set by an arbitrary number, not by the declared protection.
+  # The protection against a thin book is the turnover threshold and the
+  # slippage sweep (DEC-007), and it has nothing to do with rank.
+  #
+  # The width is NOT tuned to the result. There is one criterion, set in
+  # advance by the acceptance thresholds: the sample must be sufficient for
+  # the test (trades on OOS >= 60). This is a power calculation, not fitting.
+  top_n_sensitivity: [30, 50, 75, 100]
+
+  # [IN-SAMPLE] Liquidity threshold sweep. It was announced in words
+  # in DEC-009 and did not exist in the config, so neither of the two width
+  # knobs had a mandatory check.
+  min_turnover_sensitivity: [10_000_000, 25_000_000, 50_000_000]
+
+  # Minimum number of parts a position can be split into.
+  # An instrument that cannot be split is a different instrument in terms
+  # of risk management: you cannot take part off at 1R, you cannot exit
+  # in steps. Keeping such a symbol in the universe "with an asterisk" means
+  # that sooner or later the logic will pick it up.
+  # At a $70 notional this threshold excludes BTCUSDT (lot step $65).
+  min_position_parts: 3
+
+  # Liquidity. Its only threshold is turnover.
+  #
+  # There is DELIBERATELY NO spread filter here (DEC-007). What hurts us is
+  # not the resting spread but stop slippage at the moment of a sharp move,
+  # and a spread estimate from OHLC does not measure that. Besides, spread
+  # and turnover are strongly correlated: a second threshold from the same
+  # data would add one more knob for fitting with almost no new signal.
+  #
+  # The protection against a thin book was moved into the cost model:
+  # costs.slippage_sensitivity.
+  # DEC-009: lowered from $50M. An absolute threshold is procyclical: in
+  # quiet periods it lets fewer symbols through, which made the OOS universe
+  # half as wide as in-sample (17 vs 30), and the periods became
+  # incomparable.
+  #
+  # At $25M rank binds, not liquidity, so the width is exactly top_n in both
+  # periods. Our $70 notional is 0.0003% of daily turnover, so the slippage
+  # margin is preserved with plenty to spare.
+  #
+  # [IN-SAMPLE] The sensitivity check at $10M/$25M/$50M in Phase 2 remains
+  # mandatory.
+  min_avg_daily_turnover_usd: 25_000_000
+
+  # Absolute minimum symbol age. A rule on top of the short-symbol policy
+  # and stricter than it: freshly listed coins produce abnormal funding and
+  # OI spikes simply because the market is immature, which are exactly the
+  # features Setup A looks at. The model would love them, and there is no
+  # way to verify this on history.
+  # A symbol younger than the threshold takes part in neither in-sample nor
+  # out-of-sample.
+  min_listing_age_days: 90
+
+  # DEC-003 condition 1: lagged selection. The universe for month M is
+  # computed from turnover in month M−1. Never from turnover of the traded
+  # period.
+  selection_lag_months: 1
+
+  # Include delisted pairs restored from the public.bybit.com archive.
+  # Removes survivorship bias. See PROGRESS.md → constraint 5.
+  include_delisted: true
+
+# ---------------------------------------------------------------------------
+# Data streams and the availability matrix
+# ---------------------------------------------------------------------------
+# Availability is computed per triple (symbol, month, stream), not per symbol.
+# MULTIUSDT - candles present, OI and funding absent - is a class of cases,
+# not an exception. Admission of a symbol to the universe for a given month =
+# intersection of the streams the setup requires.
+data:
+  streams:
+    - kline_15m
+    - kline_1h
+    - kline_4h
+    - oi
+    - funding
+
+  # Setup stream requirements. A symbol is admitted to a setup for month M
+  # only if ALL listed streams are available for that month.
+  stream_requirements:
+    setup_a: [kline_15m, kline_1h, oi, funding]
+    setup_b: [kline_4h, kline_1h, oi, funding]
+    setup_c: [kline_4h, kline_1h, oi, funding]
+    # D does not read OI. 1h is needed by the correlation limit, funding by
+    # the holding cost.
+    setup_d: [kline_4h, kline_1h, funding]
+    setup_e: [kline_4h, kline_1h, funding]
+    # F reads funding as a signal, not only as a holding cost.
+    setup_f: [kline_4h, kline_1h, funding]
+    setup_g: [kline_4h, kline_1h, funding]
+    setup_h: [kline_4h, kline_1h, funding]
+    universe_ranking: [kline_1h]    # turnover is taken from candle turnover
+
+  backfill_depth_years: 2
+
+  # Minimum stream coverage share within a period, below which the symbol
+  # is not admitted to a setup (DEC-012).
+  #
+  # Completeness by presence and completeness by density are different
+  # things. A stream can formally be present yet so full of gaps that it is
+  # unusable: a series with 40% of bars is good neither for ATR nor for
+  # detecting a breakout.
+  #
+  # The denominator is the series' OWN range, not the whole period.
+  # Otherwise the check mixes two different things: a young pair (dense
+  # series, short history) and a gappy series. The first is handled by the
+  # short-symbol policy, the second by this check.
+  #
+  # Measured on collected data: symbols with density below 98% - zero,
+  # while by period coverage below 80% there would have been 50 perfectly
+  # healthy young pairs.
+  #
+  # FIXED BEFORE THE RUN. Changing it after the first results is equivalent
+  # to fitting, just as with the acceptance thresholds.
+  min_stream_coverage: 0.80
+
+  # [IN-SAMPLE] Mandatory Phase 2 sweep, the third universe-composition knob
+  # next to slippage and the liquidity threshold.
+  # A strong dependence of the result on where this line is drawn means it
+  # rests on gappy symbols.
+  coverage_sensitivity: [0.70, 0.80, 0.90]
+
+# ---------------------------------------------------------------------------
+# Backtest windows and the short-symbol policy
+# ---------------------------------------------------------------------------
+backtest:
+  in_sample_months: 18
+  out_of_sample_months: 6
+
+  # The third slice is a walk-forward window (DEC-011).
+  #
+  # Needed because a single OOS run cannot tell two cases apart:
+  # overfitting and regime sensitivity. Both produce a drawdown on OOS,
+  # and a convenient explanation is chosen after the fact. This is
+  # especially acute here: OOS is structurally quieter than in-sample
+  # (constraint 8).
+  #
+  # The walk-forward window gives not one estimate but 12-18 independent
+  # ones spread across different regimes. Read it like this:
+  #   * E positive in most windows, failures fall on quiet months
+  #     → regime sensitivity, described by a filter;
+  #   * E jumps around with no link to the regime → overfitting.
+  #
+  # A DIAGNOSTIC, NOT A REPLACEMENT for the acceptance thresholds. The
+  # standard five thresholds remain in force unchanged.
+  # Validation plans, per setup. Written BEFORE the data and changed only
+  # by a new DEC entry and only before the run (DEC-028, DEC-034).
+  #
+  # The out_of_sample window is spent ONCE FOR ALL SETUPS: whoever has
+  # looked at an out-of-sample period turns it into in-sample for any
+  # subsequent hypothesis. This is enforced by validate-setup, not by
+  # agreement.
+  validation:
+    setup_c:
+      frozen_at_commit: "a6ff492"
+      # The drawdown threshold is on the PORTFOLIO: the account trades the
+      # subsample that the limits carved out (DEC-028).
+      drawdown_basis: portfolio
+      windows:
+        # DEC-031: start moved from 2021-11-01 before the run:
+        # symbol-age censoring at the start of the download.
+        deep_history: {start: "2022-02-01", end: "2024-08-01", kind: out_of_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [deep_history, recent_oos]
+
+    setup_d:
+      # Frozen BEFORE the first run on data (DEC-034).
+      frozen_at_commit: "6668201"
+      drawdown_basis: portfolio
+      windows:
+        in_sample: {start: "2022-02-01", end: "2026-02-07", kind: in_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [in_sample, recent_oos]
+      # DEC-033: D must beat the null hypothesis (the same, with the direction
+      # chosen by a coin flip) by at least 2 SE. Otherwise it is beta, not signal.
+      null_advantage_min_se: 2.0
+      time_exit_move_floor: true
+
+    setup_e:
+      # Frozen BEFORE the first run on data (DEC-038).
+      frozen_at_commit: "f65d67f"
+      drawdown_basis: portfolio
+      windows:
+        in_sample: {start: "2022-02-01", end: "2026-02-07", kind: in_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [in_sample, recent_oos]
+      null_advantage_min_se: 2.0
+      time_exit_move_floor: true
+      # E's logic lives in D's code and is frozen together with it.
+      extra_code: [src/strategy/setup_d.py]
+
+    setup_f:
+      # Frozen BEFORE the first run on data (DEC-042).
+      frozen_at_commit: "6df0373"
+      drawdown_basis: portfolio
+      windows:
+        in_sample: {start: "2022-02-01", end: "2026-02-07", kind: in_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [in_sample, recent_oos]
+      null_advantage_min_se: 2.0
+      time_exit_move_floor: true
+      # F's run lives in its own file, not in the shared runner.py (DEC-042).
+      extra_code: [src/backtest/runner_f.py]
+
+    setup_g:
+      # Frozen BEFORE the first run on data (DEC-044).
+      frozen_at_commit: "1ba6499"
+      drawdown_basis: portfolio
+      windows:
+        in_sample: {start: "2022-02-01", end: "2026-02-07", kind: in_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [in_sample, recent_oos]
+      null_advantage_min_se: 2.0
+      time_exit_move_floor: true
+      # G's run is in its own file; the return over the window is a D function (DEC-044).
+      extra_code: [src/backtest/runner_g.py, src/strategy/setup_d.py]
+
+    setup_h:
+      # Frozen BEFORE the first run on data (DEC-046).
+      frozen_at_commit: "6c84306"
+      drawdown_basis: portfolio
+      windows:
+        in_sample: {start: "2022-02-01", end: "2026-02-07", kind: in_sample}
+        recent_oos: {start: "2026-02-07", end: "2026-09-01", kind: out_of_sample}
+      sequence: [in_sample, recent_oos]
+      null_advantage_min_se: 2.0
+      time_exit_move_floor: true
+      extra_code: [src/backtest/runner_h.py]
+
+  walk_forward:
+    enabled: true
+    train_months: 6
+    test_months: 1
+    step_months: 1
+    # Minimum number of windows below which no conclusions are drawn.
+    min_windows: 12
+
+    # Correlation of monthly E with the universe's median turnover.
+    # A strong link means this is not a strategy but a bet on market
+    # liquidity. We need to know this before Phase 3: we will be trading
+    # precisely in the quiet regime.
+    report_e_vs_liquidity_correlation: true
+    liquidity_correlation_warn_above: 0.5
+
+    # IMPORTANT WHEN READING RESULTS: the windows overlap.
+    #
+    # Training on 6 months with a one-month step means adjacent windows
+    # share 5 months of data. The eighteen E estimates are NOT independent,
+    # and ordinary statistics over them will overstate significance.
+    #
+    # The overlap is justified (otherwise there would not be enough
+    # windows), but conclusions are limited to sign and spread. Confidence
+    # intervals, t-statistics and p-values over these windows must NOT be
+    # computed.
+    #
+    # The warning is printed in the report next to the results, not only
+    # here: in a month the context will be forgotten.
+    windows_overlap: true
+    overlap_warning_in_report: true
+
+  # Contribution of marginal participants (constraint 9).
+  #
+  # The list is in config/marginal_entrants.txt. They are not excluded in
+  # advance: they legitimately pass selection. But their contribution is
+  # computed separately because it is skewed towards OOS (18 entries vs 5
+  # in IS).
+  marginal_entrants:
+    report_trade_share: true       # separately for IS and OOS
+    report_e_without_them: true    # E with the full universe and without them
+    path: "config/marginal_entrants.txt"
+
+  short_history:
+    # A symbol does not take part in parameter fitting unless it covers the
+    # whole in-sample window.
+    require_full_in_sample_for_fitting: true
+
+    # In out-of-sample it is admitted if it has at least N months of history
+    # by the start of OOS. Example: HYPEUSDT (listed 2024-11-30).
+    min_months_before_oos: 6
+
+    # Every inclusion is logged separately; the report shows the share of
+    # trades on symbols with a shortened history. Above the threshold the
+    # backtest result cannot be trusted.
+    log_each_inclusion: true
+    warn_if_trade_share_above_pct: 10.0
+
+  # Mandatory engine stress-test fixtures (Phase 2). The price moves by
+  # orders of magnitude, funding goes outside normal ranges, OI collapses
+  # to zero. Position sizing, liquidation and R-multiple calculations must
+  # survive this without NaN, division by zero or overflow.
+  collapse_fixtures:
+    - symbol: LUNAUSDT
+      period: "2022-05"
+    - symbol: FTTUSDT
+      period: "2022-11"
+
+# ---------------------------------------------------------------------------
+# Strategies (spec §6). Hypotheses to test, not a finished system.
+# ---------------------------------------------------------------------------
+strategy:
+  min_target_r: 2.0
+  # Round-trip cost ≈ 0.16%. The target must be at least 10 times larger.
+  min_move_pct: 1.6
+
+  setup_a:
+    enabled: true
+    name: "OI Compression Reversion"
+
+    # DEC-001: the trigger is formulated via OI compression. This is a
+    # DEFINITION, not an approximation of liquidations. Live trading uses
+    # exactly the same. Switching to real liquidations would require a full
+    # re-backtest from scratch.
+    #
+    # All thresholds below are [IN-SAMPLE], fixed BEFORE the first run.
+    oi_drop_pct_1h: 3.0             # minimum OI compression per hour
+    candle_range_atr_mult: 1.5      # candle size in ATR(14, 1h)
+    require_direction_match: true   # candle in the crowd's direction
+    volume_zscore_min: 2.0
+    volume_zscore_lookback_days: 7
+
+    funding_upper_percentile: 90    # above → short
+    funding_lower_percentile: 10    # below → long
+    funding_percentile_lookback_days: 30
+
+    # -----------------------------------------------------------------
+    # Filter sweeps (DEC-016). Added after the funnel showed where the
+    # frequency is lost: candle size lets through 2.1% of candidates,
+    # funding 10.9%, and the risk manager 92.7%.
+    #
+    # THE READING RULE WAS WRITTEN BEFORE THE RUN. Otherwise a sweep turns
+    # into a search for the best E, i.e. into fitting, exactly what P-005
+    # forbids.
+    #
+    # 1. A sweep is a RESULT, not a way to pick a value.
+    #    It is read the same way as the slippage sweep (DEC-007).
+    #
+    # 2. The frequency requirement is set by the acceptance thresholds, not
+    #    by desire: trades on out-of-sample >= 60. OOS is 6 months, in-sample
+    #    18, so at the same intensity >= 180 trades are needed in-sample.
+    #    This is a power calculation, not a return target.
+    #
+    # 3. If E across the sweep is FLAT (spread within noise), the filter
+    #    carries no edge and only cuts frequency. Then the weakest value that
+    #    still keeps the filter meaningful is taken, and the decision is made
+    #    by frequency.
+    #
+    # 4. If E FALLS MONOTONICALLY as it is loosened, the filter is
+    #    load-bearing. It cannot make up the frequency, and the right answer
+    #    is: the setup is untestable on two years of history (like B in
+    #    DEC-013), not "let's loosen it and see".
+    #
+    # 5. Picking a value by maximum E is FORBIDDEN in any case. E over
+    #    26 trades has a standard error of about 0.25R; the maximum over
+    #    such a sweep is picking noise.
+    #
+    # The base value must be part of its own sweep, otherwise there is
+    # nothing to compare it with.
+    # The trigger is also a knob, and before DEC-016 it had no sweep,
+    # although the funnel showed it cuts the most (lets through 1.7%).
+    # Its sweep tests not sensitivity but the hypothesis itself:
+    # if the cascade reverts, the sharper the compression, the stronger the
+    # reversion. The absence of such a dependence refutes the setup, not
+    # the setting.
+    oi_drop_pct_1h_sensitivity: [3.0, 5.0, 8.0, 12.0]
+
+    candle_range_atr_mult_sensitivity: [0.5, 1.0, 1.5, 2.0]
+    volume_zscore_min_sensitivity: [1.0, 1.5, 2.0, 2.5]
+
+    # The threshold is symmetric: value X means "long at a rank below X,
+    # short at a rank above 100 − X". One knob instead of two: asymmetric
+    # thresholds are a different hypothesis, not a setting.
+    funding_percentile_sensitivity: [10, 20, 30, 40]
+
+    entry_timeframe: 15m            # first candle back into the pre-cascade range
+    stop_atr_mult: 1.5
+    stop_atr_period: 14
+    stop_atr_timeframe: 1h
+
+    # DEC-014. The target is not an assigned number but the cascade VWAP:
+    # the average price at which the cascade closed positions. The setup's
+    # hypothesis is precisely that price returns to it, so the target must be
+    # computed from the same data as the cascade itself, not chosen
+    # separately.
+    #
+    # The cascade window is NOT a parameter: it equals the OI compression
+    # window and is set by a single constant CASCADE_WINDOW. The extreme for
+    # the stop is taken over it as well.
+    #
+    #   vwap    - target at the cascade VWAP;
+    #   fixed_r - target at target_r.
+    #
+    # fixed_r WAS CHOSEN. Not because it has a higher in-sample E (choosing
+    # by that is forbidden), but because the vwap mode FAILED P-006
+    # (DEC-015): median distance to target 0.38R against a minimum
+    # min_target_r = 2.0, and 37.5% of targets below min_move_pct.
+    # The target hit rate was 70.8%, win rate 73.9%, E exactly zero:
+    # the target is hit almost always and pays for neither the stop nor
+    # the round-trip fee.
+    #
+    # target_r = 2.5 is the spec value fixed before the first run
+    # (DEC-001, condition 2). NOT 1.5R, which the 75th percentile of the
+    # measured move would give: the "target at p75" rule was conditional,
+    # it applied if 2.5R was unreachable. After fixing three signal defects
+    # 2.5R is reachable (11.5% against a 10% threshold), the condition was
+    # not met, and there are no grounds to move a predefined parameter on
+    # in-sample.
+    exit_mode: fixed_r
+    target_r: 2.5
+    time_stop_hours: 24
+
+    # Regime veto: in a crisis cascades do not revert, they continue.
+    btc_realized_vol_veto_decile: 10
+    btc_realized_vol_lookback_days: 30
+
+  setup_b:
+    enabled: true
+    name: "Trend Continuation"
+    breakout_timeframe: 4h
+    require_oi_rising: true
+    funding_min_percentile: 30      # neutral funding = fresh money
+    funding_max_percentile: 70
+    stop_structure: swing           # beyond the previous swing low/high
+    stop_lookback_bars: 20
+    target_r: 3.0
+    time_stop_hours: 48
+
+  setup_c:
+    enabled: true
+    name: "Trend Continuation (hypothesis test)"
+
+    # DEC-018. The hypothesis is the same as Setup B's. B did NOT REFUTE it,
+    # it did not test it (DEC-013): the 3R target sat at the 98.7th
+    # percentile of its own move, and the p90 maximum move fell on the last
+    # bar of the window.
+    #
+    # ALL VALUES WERE FIXED 2026-09-24, BEFORE the run on the deeper data.
+    # None was chosen by the result; each is either inherited from B or
+    # derived from a decision already made.
+
+    # Inherited from B unchanged: the trigger and confirmations are the very
+    # hypothesis that has to be tested, not tuned.
+    breakout_lookback: 20
+    require_oi_rising: true
+    funding_min_percentile: 30
+    funding_max_percentile: 70
+    funding_percentile_lookback_days: 30
+    entry_timeframe: 4h
+
+    # In B the OI growth window silently coincided with the time stop: one
+    # number worked as two parameters. Separated, the value is unchanged.
+    oi_lookback_hours: 48
+
+    # The ONLY substantive difference from B is the stop.
+    #
+    # In B it sat beyond the 20-bar structural extreme, i.e. very far away,
+    # and both of its troubles followed from that. First, the p75 move came
+    # out at 0.70R not because the market does not move but because R was
+    # huge. Second, the risk manager rejected 885 signals on LIQ_BUFFER, and
+    # the remainder ended up skewed towards tight stops: the median distance
+    # dropped from 11.83% to 8.88% (DEC-015).
+    #
+    # 1.5 is the ATR multiplier value from the spec for Setup A. Taken from
+    # there, not invented: it is a number already adopted in the project.
+    stop_atr_mult: 1.5
+    stop_atr_period: 14
+
+    # Stop distance ceiling. DEC-013: a stop further than about 8% from the
+    # entry is infeasible at any leverage on a $40 deposit.
+    #
+    # Cut off IN THE SETUP, not by the risk manager. Its rejection is not
+    # visible in the setup's logic and silently skews the sample; an explicit
+    # rejection is counted in the funnel under its own code (DEC-015).
+    max_stop_pct: 8.0
+
+    # The target is NOT chosen by reachability; it is pinned to the economic
+    # floor. P-006: below min_target_r = 2.0 the target pays for neither the
+    # stop nor the round-trip fee, however reachable it may be. There is no
+    # freedom here at all.
+    #
+    # There is exactly one open question: does the market give 2R within the
+    # window. P-005 answers it, not tuning.
+    target_r: 2.0
+
+    # Holding window. A rule written before measuring: the window is no
+    # shorter than the one the signal is defined over. The breakout is
+    # computed over 20 bars (80 hours), a twofold margin is taken → 168 hours,
+    # 42 bars.
+    #
+    # In B the window was 12 bars with a 20-bar signal: the trade was given
+    # three times less time than it took to detect it.
+    time_stop_hours: 168
+
+    # Sweeps. A knob without a sweep is a knob whose sensitivity nobody has
+    # checked (DEC-015, DEC-016). The base value must be part of its own
+    # sweep.
+    breakout_lookback_sensitivity: [10, 20, 40, 60]
+    stop_atr_mult_sensitivity: [1.0, 1.5, 2.0, 3.0]
+    funding_band_sensitivity: [20, 30, 40]   # upper bound = 100 − lower
+    time_stop_hours_sensitivity: [48, 96, 168, 336]
+    target_r_sensitivity: [2.0, 2.5, 3.0]    # all at or above the P-006 floor
+
+  setup_d:
+    enabled: true
+    name: "Time-Series Momentum (daily)"
+
+    # DEC-033. Preregistered in commit 121349f BEFORE a single line of the
+    # setup's code was written. Values are not changed based on results.
+    #
+    # Hypothesis: the sign of the 4-week return predicts the sign of the
+    # next week's return. Exit by time only.
+    lookback_days: 28               # top of the 1–4 week range
+    hold_days: 7                    # weekly rebalancing
+    stop_atr_mult: 2.0              # the turtles' "2N", a sizing tool
+    stop_atr_period: 14
+    # $40 × 1.5% = $0.60 of risk; $0.60 / $5 minimum notional = 12%.
+    # A further stop gives a position below the exchange minimum.
+    max_stop_pct: 12.0
+
+    # Moving the stop to breakeven is NOT applied to D: it contradicts the
+    # "hold for a week" hypothesis. D's runner does not pass it.
+
+    lookback_days_sensitivity: [7, 14, 28, 56]
+    hold_days_sensitivity: [3, 7, 14]
+    stop_atr_mult_sensitivity: [1.5, 2.0, 3.0]
+
+  setup_e:
+    enabled: true
+    name: "Time-Series Momentum (daily, as intended)"
+
+    # DEC-038. Setup D's rule WITHOUT changing a single parameter.
+    # Preregistered in commit 4fc3591 before implementation.
+    #
+    # At $40 what was tested was "rule D on the 16% of days where the stop
+    # fit within 12%", not the rule. Exactly the stop ceiling changes, by
+    # the same formula as in DEC-033: risk / minimum order = $1.50 / $5 = 30%.
+    lookback_days: 28
+    hold_days: 7
+    stop_atr_mult: 2.0
+    stop_atr_period: 14
+    max_stop_pct: 30.0
+
+    lookback_days_sensitivity: [7, 14, 28, 56]
+    hold_days_sensitivity: [3, 7, 14]
+    stop_atr_mult_sensitivity: [1.5, 2.0, 3.0]
+
+  setup_f:
+    enabled: true
+    name: "Funding skew, against the crowd"
+
+    # DEC-042. Preregistered before implementation and before any run.
+    funding_window_days: 3        # skew measure: average 8h payment over the window
+    history_days: 180             # percentile among its own past closes
+    min_history: 120              # fewer: no signal (P-001)
+    extreme_pct: 10               # top/bottom P% of history
+    base_rate_8h: 0.0001          # 0.01%: short only above the base rate
+    min_coverage: 0.9             # share of the window covered by accruals
+    hold_days: 3
+    stop_atr_mult: 2.0
+    stop_atr_period: 14
+    max_stop_pct: 30.0            # same formula as E: $1.50 / $5
+
+    funding_window_days_sensitivity: [1, 3, 7]
+    extreme_pct_sensitivity: [5, 10, 20]
+    hold_days_sensitivity: [1, 3, 7]
+    stop_atr_mult_sensitivity: [1.5, 2.0, 3.0]
+
+  setup_g:
+    enabled: true
+    name: "Rank momentum, market-neutral"
+
+    # DEC-044. Preregistered before implementation and before any run.
+    lookback_days: 28
+    top_k: 3                      # K strongest long and K weakest short
+    min_candidates: 10            # fewer: nothing to rank
+    hold_days: 7
+    stop_atr_mult: 2.0
+    stop_atr_period: 14
+    max_stop_pct: 30.0
+
+    lookback_days_sensitivity: [7, 14, 28, 56]
+    top_k_sensitivity: [1, 3, 5]
+    hold_days_sensitivity: [3, 7, 14]
+    stop_atr_mult_sensitivity: [1.5, 2.0, 3.0]
+
+  setup_h:
+    enabled: true
+    name: "Reversion after an extreme day"
+
+    # DEC-046. Preregistered before implementation and before any run.
+    extreme_atr_mult: 3.0         # |day's move| ≥ k × ATR at the previous close
+    hold_days: 3
+    stop_atr_mult: 2.0
+    stop_atr_period: 14
+    max_stop_pct: 30.0
+
+    extreme_atr_mult_sensitivity: [2.0, 2.5, 3.0, 4.0]
+    hold_days_sensitivity: [1, 3, 7]
+    stop_atr_mult_sensitivity: [1.5, 2.0, 3.0]
+
+  management:
+    # At +1R the stop moves to breakeven INCLUDING fees. At our size this
+    # turns part of the potential −5% into 0%.
+    #
+    # The rule sat here from the very beginning and until DEC-020 was not
+    # implemented anywhere: the CloseReason.BREAKEVEN code existed, the logic
+    # did not.
+    #
+    # Measured on Setup C, in-sample. A trade-off, not an improvement:
+    #   without the move : E +0.084R, win rate 38.0%, p95 drawdown 28.6%
+    #   with the move    : E +0.069R, win rate 28.8%, p95 drawdown 24.1%
+    #
+    # E per signal FALLS: the move cuts off some future winners.
+    # Enabled because the spec says so and because it lowers the drawdown,
+    # whose threshold was fixed in advance. Not because the final equity on
+    # a single path came out higher: a single path decides nothing.
+    breakeven_at_r: 1.0
+    breakeven_include_fees: true
+
+# ---------------------------------------------------------------------------
+# Funding normalization
+# ---------------------------------------------------------------------------
+# fundingInterval differs between symbols (BTC 480 min, some alts 240/60).
+# Percentiles over raw values are not comparable across pairs, so everything
+# is brought to a common base.
+funding:
+  normalize_to_hours: 8
+
+# ---------------------------------------------------------------------------
+# Bybit API
+# ---------------------------------------------------------------------------
+bybit:
+  rest_base_url: "https://api.bybit.com"
+  testnet_base_url: "https://api-testnet.bybit.com"
+  public_archive_url: "https://public.bybit.com/trading/"
+  category: linear
+
+  rate_limit:
+    # Bybit's public limit is per IP. We stay well below the ceiling:
+    # exceeding it gets the IP blocked, not a soft rejection.
+    requests_per_second: 20
+    burst: 40
+    max_retries: 5
+    timeout_seconds: 20.0
+
+    # Error classes are kept apart: their retries cost differently.
+    backoff:
+      # Connection drop, timeout, 5xx. The server did not ask us to slow
+      # down, so we retry quickly.
+      network:
+        base_seconds: 0.5
+        max_seconds: 30.0
+      # 429 and retCode 10006/10018. The exchange said "too often" outright,
+      # and the next such response brings an IP ban closer. The base interval
+      # is an order of magnitude larger than the network one, the ceiling is
+      # minutes.
+      rate_limit:
+        base_seconds: 5.0
+        max_seconds: 300.0
+
+    # If the exchange returned Retry-After or X-Bapi-Limit-Reset-Timestamp,
+    # that is more accurate than any exponential of ours. The ceiling keeps
+    # a malformed header from hanging the collector for hours.
+    respect_retry_after: true
+    max_retry_after_seconds: 300.0
+
+    # Circuit breaker.
+    #
+    # If after several full cycles of 300 s pauses the exchange still
+    # answers 403/429, this is no longer a limit window but an IP ban or a
+    # regional block. Further attempts only extend the block.
+    #
+    # Consecutive EXHAUSTED cycles in the "rate limit" class are counted:
+    # any successful response resets the counter.
+    circuit_breaker:
+      max_consecutive_rate_limit_failures: 3
+
+  # The one-off listing of symbols from the archive is cached to disk.
+  # A repeated run does not hammer the API again; a forced refresh is done
+  # with the --refresh flag of the corresponding CLI commands.
+  bootstrap_cache:
+    path: "var/cache/bybit"
+    ttl_hours: 168                  # a week
+
+# ---------------------------------------------------------------------------
+# LLM layer (spec §2, §6). It can ONLY veto.
+# ---------------------------------------------------------------------------
+ai:
+  enabled: false                    # enabled in Phase 3
+  provider: gemini
+  veto_confidence_threshold: 0.6
+  request_timeout_seconds: 20
+  # On an invalid response the agent is treated as silent and the signal
+  # goes on.
+  invalid_response_policy: treat_as_silent

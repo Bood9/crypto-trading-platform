@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# P-002: a commit goes through only if the check exits with code zero.
+#
+# A barrier, not a reminder. The rule was already broken with a working
+# check.sh: the script honestly printed "ERRORS FOUND", but the output was
+# read by eye, not by exit code.
+#
+# Bypass deliberately: git commit --no-verify
+set -euo pipefail
+
+exec ./scripts/check.sh

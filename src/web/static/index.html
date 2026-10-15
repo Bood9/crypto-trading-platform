@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>CRYPTO — panel</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-overview" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 7"/></symbol>
+      <symbol id="i-positions" viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="12" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3.5 12h17"/></symbol>
+      <symbol id="i-trades" viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 0 2.1-5M5 4.5V8h3.5M12 8v4.5l3 1.8"/></symbol>
+      <symbol id="i-risk" viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6l-7-2.5Z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+      <symbol id="i-journal" viewBox="0 0 24 24"><path d="M8 6h11M8 12h11M8 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+      <symbol id="i-runs" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M10 14l2 2 3.5-3.5"/></symbol>
+      <symbol id="i-bots" viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="3"/><path d="M12 8V4.5M9.5 13h.01M14.5 13h.01M9.5 16.5h5M2.5 12.5v2M21.5 12.5v2"/><circle cx="12" cy="4" r=".6"/></symbol>
+      <symbol id="i-paths" viewBox="0 0 24 24"><circle cx="5" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="18" r="2"/><path d="M6.6 7.4 10.4 10.6M13.6 13.4l3.8 3.2M19 6h-4M5 18h4"/></symbol>
+      <symbol id="i-strategy" viewBox="0 0 24 24"><path d="M5 4.5h9.5L19 9v10.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1Z"/><path d="M14 4.5V9h5M8 13h8M8 16.5h5"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app">
+    <aside class="sidebar" aria-label="Sections">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <div class="brand-name">CRYPTO</div>
+          <div class="brand-sub" id="book-title">Setup E · paper</div>
+        </div>
+      </div>
+      <div class="segmented" id="books" role="tablist" aria-label="Book" hidden></div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-foot">
+        <div class="status" id="status" role="status"></div>
+        <div class="updated" id="updated"></div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="banner" id="banner" hidden></div>
+
+      <!-- ── Overview ──────────────────────────────────── -->
+      <section class="view" data-view="overview" aria-labelledby="h-overview">
+        <header class="view-head">
+          <p class="kicker" id="overview-kicker">Setup E · paper</p>
+          <h1 id="h-overview">Overview</h1>
+        </header>
+        <div class="hero card">
+          <div class="hero-main">
+            <div class="eyebrow">Equity</div>
+            <div class="hero-value" id="equity">—</div>
+            <div class="hero-delta" id="equity-delta"></div>
+          </div>
+          <dl class="facts" id="hero-facts"></dl>
+        </div>
+        <div class="tiles" id="overview-tiles"></div>
+        <div class="card">
+          <div class="card-head">
+            <div><h2>Equity on closed trades</h2>
+              <p class="sub">Changes when a trade closes. The dashed line is the starting deposit.</p></div>
+          </div>
+          <div class="chart" id="equity-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div><h2>In positions now</h2></div>
+            <a class="link" href="#positions">All positions →</a>
+          </div>
+          <div class="pos-cards" id="overview-positions"></div>
+        </div>
+      </section>
+
+      <!-- ── Bots ──────────────────────────────────────── -->
+      <section class="view" data-view="bots" aria-labelledby="h-bots" hidden>
+        <header class="view-head">
+          <p class="kicker">Platform</p>
+          <h1 id="h-bots">Bots</h1>
+          <p class="lede">Five bots, each with its own job, and each checks its neighbour's work. They hand it
+            to each other through the board in the database. A trade is entered only on two "yes" votes: the Executor's and the Risk Manager's.</p>
+        </header>
+        <div class="card">
+          <div class="card-head"><div><h2 id="pipe-title">Last night</h2>
+            <p class="sub" id="pipe-sub"></p></div></div>
+          <ol class="pipeline" id="pipeline"></ol>
+        </div>
+        <div class="bot-grid" id="bot-windows"></div>
+      </section>
+
+      <!-- ── Trade path ────────────────────────────────── -->
+      <section class="view" data-view="paths" aria-labelledby="h-paths" hidden>
+        <header class="view-head">
+          <p class="kicker">Every signal through the bots</p>
+          <h1 id="h-paths">Trade path</h1>
+          <p class="lede">What happened to each signal of the night: did the Risk Manager approve it, did the Executor enter,
+            did the Controller confirm — and at which step and why it dropped out.</p>
+        </header>
+        <div class="toolbar"><div class="chips" id="path-days" role="tablist" aria-label="Night"></div></div>
+        <div class="tiles tiles-5" id="path-tiles"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h2>Funnel</h2>
+            <p class="sub">How many symbols passed each stage</p></div></div>
+            <div class="hbars" id="path-funnel"></div></div>
+          <div class="card"><div class="card-head"><div><h2>Rejection reasons</h2>
+            <p class="sub legend"><span><span class="key rule"></span>strategy and risk rule</span>
+              <span><span class="key platform"></span>platform: data, window, second key</span></p></div></div>
+            <div class="hbars" id="path-codes"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Every symbol</h2>
+            <p class="sub">✓ — stage passed, ✕ — rule rejection, ⚠ — platform rejection, — — not reached.</p></div>
+            <div class="chips" id="path-filter" role="tablist" aria-label="Filter"></div></div>
+          <div class="table-wrap"><table class="table paths" id="path-table"></table></div>
+          <div class="closes" id="path-closes"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>By night</h2>
+            <p class="sub legend"><span><span class="key entered"></span>entered</span>
+              <span><span class="key rule"></span>rule rejection</span>
+              <span><span class="key platform"></span>platform rejection</span></p></div></div>
+          <div class="chart chart-short" id="path-trend"></div>
+        </div>
+      </section>
+
+      <!-- ── Positions ─────────────────────────────────── -->
+      <section class="view" data-view="positions" aria-labelledby="h-positions" hidden>
+        <header class="view-head">
+          <p class="kicker">Open now</p>
+          <h1 id="h-positions">Positions</h1>
+          <p class="lede">Each position is held for 7 days or until the stop. The stop sits on the exchange from the first second.
+            Price is the last close of the hourly bar on Bybit's main market.</p>
+        </header>
+        <div class="pos-cards pos-cards-lg" id="positions-cards"></div>
+        <div class="card">
+          <div class="card-head"><div><h2>Table</h2></div></div>
+          <div class="table-wrap"><table class="table" id="positions"></table></div>
+        </div>
+      </section>
+
+      <!-- ── Trades ────────────────────────────────────── -->
+      <section class="view" data-view="trades" aria-labelledby="h-trades" hidden>
+        <header class="view-head">
+          <p class="kicker">History</p>
+          <h1 id="h-trades">Trades</h1>
+          <p class="lede">R — trade result relative to the risk to the stop. −1R — the stop was hit, about 1.5% of the deposit.</p>
+        </header>
+        <div class="tiles" id="trades-tiles"></div>
+        <div class="card">
+          <div class="card-head"><div><h2>Result of each trade</h2>
+            <p class="sub">Oldest on the left, newest on the right.</p></div></div>
+          <div class="chart chart-short" id="r-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Closed trades</h2></div></div>
+          <div class="table-wrap"><table class="table" id="trades"></table></div>
+        </div>
+      </section>
+
+      <!-- ── Risk ──────────────────────────────────────── -->
+      <section class="view" data-view="risk" aria-labelledby="h-risk" hidden>
+        <header class="view-head">
+          <p class="kicker">Limits and mode</p>
+          <h1 id="h-risk">Risk</h1>
+          <p class="lede">Limits are checked before every entry. The daily one lifts itself at 03:00 MSK,
+            the weekly one only with the <code>trade-resume</code> command.</p>
+        </header>
+        <div class="card mode-card" id="mode-card"></div>
+        <div class="grid-2">
+          <div class="card" id="loss-card"></div>
+          <div class="card" id="exposure-card"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Per-trade rules</h2></div></div>
+          <dl class="spec" id="risk-rules"></dl>
+        </div>
+      </section>
+
+      <!-- ── Decisions ─────────────────────────────────── -->
+      <section class="view" data-view="journal" aria-labelledby="h-journal" hidden>
+        <header class="view-head">
+          <p class="kicker">Cycle journal</p>
+          <h1 id="h-journal">Decisions</h1>
+          <p class="lede">Every decision with a reason code: what was opened, what was closed and why something was skipped.</p>
+        </header>
+        <div class="toolbar">
+          <div class="chips" id="journal-filter" role="tablist" aria-label="Filter"></div>
+          <label class="search"><span class="visually-hidden">Search</span>
+            <input type="search" id="journal-search" placeholder="Symbol or reason" autocomplete="off"></label>
+        </div>
+        <div class="card flush"><div class="journal" id="journal"></div></div>
+      </section>
+
+      <!-- ── Runs ──────────────────────────────────────── -->
+      <section class="view" data-view="runs" aria-labelledby="h-runs" hidden>
+        <header class="view-head">
+          <p class="kicker">Scheduler and data</p>
+          <h1 id="h-runs">Runs</h1>
+          <p class="lede">The cycle starts on its own every night. Entries only in the 03:05–05:00 MSK window,
+            closes at any time.</p>
+        </header>
+        <div class="health" id="health"></div>
+        <div class="card">
+          <div class="card-head"><div><h2>Run journal</h2>
+            <p class="sub" id="runlog-path">var/live/journal.md</p></div></div>
+          <div class="runlog" id="runlog"></div>
+        </div>
+      </section>
+
+      <!-- ── Strategy ──────────────────────────────────── -->
+      <section class="view" data-view="strategy" aria-labelledby="h-strategy" hidden>
+        <header class="view-head">
+          <p class="kicker">What is traded and why</p>
+          <h1 id="h-strategy">Strategy</h1>
+        </header>
+        <div class="card prose" id="strategy-about"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-head"><div><h2>Parameters</h2>
+            <p class="sub">Frozen until the test. Not tuned on results.</p></div></div>
+            <dl class="spec" id="strategy-params"></dl></div>
+          <div class="card" id="forward-card"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h2>Acceptance thresholds</h2>
+            <p class="sub">Recorded before the first run. Backtest 2022–2026, 4,118 trades.</p></div></div>
+          <div class="table-wrap"><table class="table" id="acceptance"></table></div>
+        </div>
+        <p class="footnote">The panel is read-only. Orders are placed by the nightly cycle; resuming after a halt is
+          the <code>trade-resume</code> command. This is not a promise of profit and not investment advice.</p>
+      </section>
+      <!-- ── More (phone only) ─────────────────────────── -->
+      <section class="view" data-view="more" aria-labelledby="h-more" hidden>
+        <header class="view-head"><h1 id="h-more">More</h1></header>
+        <div class="card flush"><nav class="more-list" id="more-list"></nav></div>
+        <div class="card" id="more-books-card" hidden>
+          <div class="card-head"><div><h2>Book</h2><p class="sub">Which trading to show</p></div></div>
+          <div class="segmented" id="more-books" role="tablist" aria-label="Book"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>

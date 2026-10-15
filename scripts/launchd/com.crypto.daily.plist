@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.crypto.daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__PROJECT_DIR__/scripts/scheduled.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__PROJECT_DIR__</string>
+  <!-- Every hour at :05 local time, the same minute as the pmset wake
+       (02:05). On battery the Mac wakes for about 40 seconds: a job at :10
+       did not manage to start (nights of 27.09 and 29.09). At night it runs
+       the decision cycle, by day the stop watch; scheduled.sh decides which. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__PROJECT_DIR__/var/live/launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>__PROJECT_DIR__/var/live/launchd.log</string>
+</dict>
+</plist>

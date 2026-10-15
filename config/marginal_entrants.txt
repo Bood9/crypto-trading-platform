@@ -1,0 +1,35 @@
+# Symbols added to the universe by lowering the threshold to $25M (DEC-009).
+# Their contribution is reported SEPARATELY in the backtest report (constraint 9):
+#   * their share of trades, separately for in-sample and out-of-sample;
+#   * E over the full universe and E without them.
+#
+# They are NOT excluded in advance: they legitimately enter the top 30 by the
+# selection rule. The point of the check is different: if the result changes
+# noticeably without them, it rests on marginal participants, and that is an
+# independent sign of fragility, regardless of whether the thresholds passed.
+#
+# Distribution of entries: in-sample 5, out-of-sample 18 (peak 6 of 30
+# in April 2026). The shift is structural: in IS the universe hit the rank
+# limit even at $50M; in OOS the threshold was the binding constraint.
+10000SATSUSDT
+1000LUNCUSDT
+ALLOUSDT
+ARIAUSDT
+BARDUSDT
+ENJUSDT
+ESPORTSUSDT
+HOMEUSDT
+KITEUSDT
+LYNUSDT
+MAVIAUSDT
+PAXGUSDT
+PIEVERSEUSDT
+PIXELUSDT
+POWERUSDT
+SAHARAUSDT
+UBUSDT
+VELVETUSDT
+VVVUSDT
+ZETAUSDT
+ZORAUSDT
+ZROUSDT
